@@ -133,11 +133,23 @@ class ShiftService:
                 manual_out_usd += float(r["usd_sum"] or 0.0)
                 manual_out_bs += float(r["bs_sum"] or 0.0)
 
+        # 4. Vueltos entregados en efectivo durante el turno
+        cursor.execute("""
+            SELECT 
+                COALESCE(SUM(change_usd), 0.0) as total_change_usd,
+                COALESCE(SUM(change_bs), 0.0) as total_change_bs
+            FROM sales
+            WHERE shift_id = ? AND status = 'COMPLETED'
+        """, (shift_id,))
+        change_row = cursor.fetchone()
+        total_change_usd = float(change_row["total_change_usd"] or 0.0) if change_row else 0.0
+        total_change_bs = float(change_row["total_change_bs"] or 0.0) if change_row else 0.0
+
         conn.close()
 
-        # Fórmulas de efectivo esperado
-        expected_usd = initial_usd + payment_sums["USD_EFECTIVO"] + manual_in_usd - manual_out_usd
-        expected_bs = initial_bs + payment_sums["BS_EFECTIVO"] - total_advances_dispensed_bs + manual_in_bs - manual_out_bs
+        # Fórmulas de efectivo esperado en gaveta física
+        expected_usd = initial_usd + payment_sums["USD_EFECTIVO"] - total_change_usd + manual_in_usd - manual_out_usd
+        expected_bs = initial_bs + payment_sums["BS_EFECTIVO"] - total_change_bs - total_advances_dispensed_bs + manual_in_bs - manual_out_bs
 
         # Totales electrónicos acumulados
         total_card_bs = payment_sums["BS_TARJETA"] + advances_card_bs
@@ -155,6 +167,9 @@ class ShiftService:
             "sales_bs_cash": payment_sums["BS_EFECTIVO"],
             "sales_bs_card": payment_sums["BS_TARJETA"],
             "sales_bs_pm": payment_sums["BS_PAGO_MOVIL"],
+            # Vueltos entregados
+            "total_change_usd": total_change_usd,
+            "total_change_bs": total_change_bs,
             # Avances
             "advances_dispensed_bs": total_advances_dispensed_bs,
             "advances_card_bs": advances_card_bs,
@@ -209,10 +224,12 @@ class ShiftService:
                   metrics["total_card_bs"], metrics["total_pago_movil_bs"], notes, shift_id))
 
             # Registrar movimiento de cierre
+            diff_desc = f"Dif USD: {diff_usd:+,.2f}, Dif BS: {diff_bs:+,.2f}" if (abs(diff_usd) > 0.001 or abs(diff_bs) > 0.001) else "Cuadrado (Sin diferencias)"
+            desc = f"Cierre Turno #{shift_id}. {diff_desc}"
             cursor.execute("""
                 INSERT INTO cash_movements (shift_id, type, description, amount_usd, amount_bs, payment_method, created_at)
                 VALUES (?, 'CIERRE', ?, ?, ?, 'MIXTO', ?)
-            """, (shift_id, f"Cierre de turno #{shift_id}. Dif USD: {diff_usd}, Dif BS: {diff_bs}", real_usd, real_bs, ts))
+            """, (shift_id, desc, real_usd, real_bs, ts))
 
             conn.commit()
             conn.close()

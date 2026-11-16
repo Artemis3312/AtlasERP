@@ -23,13 +23,13 @@ class PaymentDialog(QDialog):
         self.total_bs = round(self.total_usd * self.rate, 2)
 
         self.setWindowTitle("Cobro y Facturación")
-        self.setMinimumWidth(630)
+        self.total_change_usd = 0.0
+        self.total_change_bs = 0.0
+        self.current_over_usd = 0.0
+        self.current_over_bs = 0.0
 
-        # Altura fija y cómoda para evitar que la ventana crezca o se corte fuera de pantalla
-        screen = QApplication.primaryScreen()
-        avail_h = screen.availableGeometry().height() if screen else 768
-        target_h = min(510, max(440, avail_h - 170))
-        self.setFixedSize(640, target_h)
+        # Altura fija a 540px según requerimiento del usuario
+        self.setFixedSize(650, 540)
 
         self.setup_ui()
         self.calculate_balances()
@@ -45,10 +45,10 @@ class PaymentDialog(QDialog):
             screen = QApplication.primaryScreen()
             if screen:
                 avail = screen.availableGeometry()
-                if geo.bottom() > avail.bottom() - 15:
-                    geo.moveBottom(avail.bottom() - 25)
-                if geo.top() < avail.top() + 15:
-                    geo.moveTop(avail.top() + 25)
+                if geo.bottom() > avail.bottom() - 10:
+                    geo.moveBottom(avail.bottom() - 15)
+                if geo.top() < avail.top() + 10:
+                    geo.moveTop(avail.top() + 15)
             self.setGeometry(geo)
 
     def setup_ui(self):
@@ -287,37 +287,70 @@ class PaymentDialog(QDialog):
 
         bal_layout.addLayout(info_grid)
 
-        # Panel de Vuelto / Sobrante
+        # Panel de Vuelto / Sobrante (Soporta entrega combinada en USD y Bolívares)
         self.frame_change = QFrame()
         self.frame_change.setObjectName("cardHighlight")
         fc_layout = QVBoxLayout(self.frame_change)
-        fc_layout.setContentsMargins(10, 8, 10, 8)
+        fc_layout.setContentsMargins(12, 8, 12, 8)
         fc_layout.setSpacing(6)
 
-        lbl_change_title = QLabel("Vuelto / Cambio para el Cliente:")
-        lbl_change_title.setStyleSheet("font-weight: 700; color: #222A2A; font-size: 12px;")
-        fc_layout.addWidget(lbl_change_title)
+        # Encabezado con el Total General a Entregar de Vuelto
+        h_vuelto_top = QHBoxLayout()
+        lbl_change_title = QLabel("Vuelto / Cambio Total a Entregar:")
+        lbl_change_title.setStyleSheet("font-weight: 700; color: #222A2A; font-size: 11px;")
+        self.lbl_change_total_summary = QLabel("$ 0.00 | Bs. 0,00")
+        self.lbl_change_total_summary.setStyleSheet("font-size: 13px; font-weight: 800; color: #EC4624;")
+        h_vuelto_top.addWidget(lbl_change_title)
+        h_vuelto_top.addStretch()
+        h_vuelto_top.addWidget(self.lbl_change_total_summary)
+        fc_layout.addLayout(h_vuelto_top)
 
-        # Selector de moneda para el vuelto
-        vuelto_row = QHBoxLayout()
-        self.btn_group_vuelto = QButtonGroup(self)
+        # Desglose Múltiple de Vuelto: USD y Bolívares combinables
+        vuelto_grid = QGridLayout()
+        vuelto_grid.setContentsMargins(0, 2, 0, 2)
+        vuelto_grid.setSpacing(6)
 
-        self.rad_vuelto_usd = QRadioButton("Vuelto en USD Efectivo")
-        self.rad_vuelto_usd.setChecked(True)
-        self.rad_vuelto_usd.toggled.connect(self.update_vuelto_display)
+        # Fila 1: Vuelto USD
+        lbl_v_usd = QLabel("Vuelto en USD Efectivo:")
+        lbl_v_usd.setStyleSheet("font-size: 11px; font-weight: 600; color: #222A2A;")
+        self.spn_vuelto_usd = QDoubleSpinBox()
+        self.spn_vuelto_usd.setPrefix("$ ")
+        self.spn_vuelto_usd.setRange(0.0, 999999.0)
+        self.spn_vuelto_usd.setDecimals(2)
+        self.spn_vuelto_usd.valueChanged.connect(self.on_vuelto_usd_changed)
 
-        self.rad_vuelto_bs = QRadioButton("Vuelto en Bolívares Efectivo")
-        self.rad_vuelto_bs.toggled.connect(self.update_vuelto_display)
+        btn_all_v_usd = QPushButton("Todo USD")
+        btn_all_v_usd.setObjectName("btnSecondary")
+        btn_all_v_usd.setStyleSheet("padding: 4px 10px; font-size: 11px;")
+        btn_all_v_usd.clicked.connect(self.set_vuelto_all_usd)
 
-        self.btn_group_vuelto.addButton(self.rad_vuelto_usd)
-        self.btn_group_vuelto.addButton(self.rad_vuelto_bs)
+        vuelto_grid.addWidget(lbl_v_usd, 0, 0)
+        vuelto_grid.addWidget(self.spn_vuelto_usd, 0, 1)
+        vuelto_grid.addWidget(btn_all_v_usd, 0, 2)
 
-        vuelto_row.addWidget(self.rad_vuelto_usd)
-        vuelto_row.addWidget(self.rad_vuelto_bs)
-        fc_layout.addLayout(vuelto_row)
+        # Fila 2: Vuelto Bs
+        lbl_v_bs = QLabel("Vuelto en Bs. Efectivo:")
+        lbl_v_bs.setStyleSheet("font-size: 11px; font-weight: 600; color: #222A2A;")
+        self.spn_vuelto_bs = QDoubleSpinBox()
+        self.spn_vuelto_bs.setPrefix("Bs. ")
+        self.spn_vuelto_bs.setRange(0.0, 999999999.0)
+        self.spn_vuelto_bs.setDecimals(2)
+        self.spn_vuelto_bs.valueChanged.connect(self.on_vuelto_bs_changed)
 
+        btn_all_v_bs = QPushButton("Todo Bs")
+        btn_all_v_bs.setObjectName("btnSecondary")
+        btn_all_v_bs.setStyleSheet("padding: 4px 10px; font-size: 11px;")
+        btn_all_v_bs.clicked.connect(self.set_vuelto_all_bs)
+
+        vuelto_grid.addWidget(lbl_v_bs, 1, 0)
+        vuelto_grid.addWidget(self.spn_vuelto_bs, 1, 1)
+        vuelto_grid.addWidget(btn_all_v_bs, 1, 2)
+
+        fc_layout.addLayout(vuelto_grid)
+
+        # Indicador de entrega detallada al cliente
         self.lbl_change_amount = QLabel("$ 0.00")
-        self.lbl_change_amount.setStyleSheet("font-size: 17px; font-weight: 900; color: #222A2A;")
+        self.lbl_change_amount.setStyleSheet("font-size: 14px; font-weight: 900; color: #222A2A;")
         fc_layout.addWidget(self.lbl_change_amount)
 
         bal_layout.addWidget(self.frame_change)
@@ -412,6 +445,10 @@ class PaymentDialog(QDialog):
             self.lbl_remain_disp.setText(f"{format_usd(diff_usd)}  |  {format_bs(diff_bs)}")
             self.lbl_remain_disp.setStyleSheet("font-size: 15px; font-weight: 700; color: #EC4624;")
             self.frame_change.setVisible(False)
+            self.current_over_usd = 0.0
+            self.current_over_bs = 0.0
+            self.spn_vuelto_usd.setValue(0.0)
+            self.spn_vuelto_bs.setValue(0.0)
             self.btn_confirm.setEnabled(False)
         else:
             self.lbl_remain_disp.setText("PAGADO COMPLETAMENTE")
@@ -420,31 +457,73 @@ class PaymentDialog(QDialog):
 
             over_usd = round(abs(diff_usd), 2) if diff_usd < -0.01 else 0.0
             if over_usd > 0.01:
+                prev_over = self.current_over_usd
+                self.current_over_usd = over_usd
+                self.current_over_bs = round(over_usd * self.rate, 2)
                 self.frame_change.setVisible(True)
-                self.update_vuelto_display()
-                # Desplazamiento suave para asegurar visibilidad del vuelto en pantallas pequeñas
-                QTimer.singleShot(40, lambda: self.scroll_area.verticalScrollBar().setValue(
-                    self.scroll_area.verticalScrollBar().maximum()
-                ))
+                self.lbl_change_total_summary.setText(f"{format_usd(self.current_over_usd)}  |  {format_bs(self.current_over_bs)}")
+
+                # Configurar rangos máximos de los spinboxes
+                self.spn_vuelto_usd.setMaximum(self.current_over_usd)
+                self.spn_vuelto_bs.setMaximum(self.current_over_bs)
+
+                # Si cambió el monto total de vuelto o estaba en cero, inicializar desglose
+                if abs(prev_over - over_usd) > 0.01 or (self.spn_vuelto_usd.value() == 0 and self.spn_vuelto_bs.value() == 0):
+                    if self.chk_usd.isChecked() and self.spn_usd_cash.value() > 0:
+                        self.set_vuelto_all_usd()
+                    else:
+                        self.set_vuelto_all_bs()
+                else:
+                    self.update_vuelto_summary_text()
             else:
+                self.current_over_usd = 0.0
+                self.current_over_bs = 0.0
                 self.frame_change.setVisible(False)
+                self.spn_vuelto_usd.setValue(0.0)
+                self.spn_vuelto_bs.setValue(0.0)
 
-    def update_vuelto_display(self):
-        usd_cash = self.spn_usd_cash.value() if self.chk_usd.isChecked() else 0.0
-        bs_cash = self.spn_bs_cash.value() if self.chk_bs_cash.isChecked() else 0.0
-        bs_card = self.spn_bs_card.value() if self.chk_card.isChecked() else 0.0
-        bs_pm = self.spn_bs_pm.value() if self.chk_pm.isChecked() else 0.0
+    def on_vuelto_usd_changed(self, val: float):
+        if not self.frame_change.isVisible() or self.current_over_usd <= 0:
+            return
+        v_usd = min(val, self.current_over_usd)
+        rem_usd = max(0.0, round(self.current_over_usd - v_usd, 2))
+        rem_bs = round(rem_usd * self.rate, 2)
+        self.spn_vuelto_bs.blockSignals(True)
+        self.spn_vuelto_bs.setValue(rem_bs)
+        self.spn_vuelto_bs.blockSignals(False)
+        self.update_vuelto_summary_text()
 
-        paid_usd = usd_cash + ((bs_cash + bs_card + bs_pm) / self.rate)
-        over_usd = round(max(0.0, paid_usd - self.total_usd), 2)
-        over_bs = round(over_usd * self.rate, 2)
+    def on_vuelto_bs_changed(self, val: float):
+        if not self.frame_change.isVisible() or self.current_over_bs <= 0:
+            return
+        v_bs = min(val, self.current_over_bs)
+        rem_bs = max(0.0, round(self.current_over_bs - v_bs, 2))
+        rem_usd = round(rem_bs / self.rate, 2)
+        self.spn_vuelto_usd.blockSignals(True)
+        self.spn_vuelto_usd.setValue(rem_usd)
+        self.spn_vuelto_usd.blockSignals(False)
+        self.update_vuelto_summary_text()
 
-        if self.rad_vuelto_usd.isChecked():
-            self.lbl_change_amount.setText(f"Entregar: {format_usd(over_usd)} en efectivo (USD)")
-            self.lbl_change_amount.setStyleSheet("font-size: 17px; font-weight: 900; color: #222A2A;")
+    def set_vuelto_all_usd(self):
+        self.spn_vuelto_usd.setValue(self.current_over_usd)
+
+    def set_vuelto_all_bs(self):
+        self.spn_vuelto_bs.setValue(self.current_over_bs)
+
+    def update_vuelto_summary_text(self):
+        v_usd = round(self.spn_vuelto_usd.value(), 2)
+        v_bs = round(self.spn_vuelto_bs.value(), 2)
+        if v_usd > 0 and v_bs > 0:
+            self.lbl_change_amount.setText(f"Entregar: {format_usd(v_usd)} (USD)  +  {format_bs(v_bs)} (Bolívares)")
+            self.lbl_change_amount.setStyleSheet("font-size: 13px; font-weight: 800; color: #222A2A;")
+        elif v_usd > 0:
+            self.lbl_change_amount.setText(f"Entregar: {format_usd(v_usd)} en efectivo (USD)")
+            self.lbl_change_amount.setStyleSheet("font-size: 13px; font-weight: 800; color: #222A2A;")
+        elif v_bs > 0:
+            self.lbl_change_amount.setText(f"Entregar: {format_bs(v_bs)} en efectivo (Bolívares)")
+            self.lbl_change_amount.setStyleSheet("font-size: 13px; font-weight: 800; color: #F39120;")
         else:
-            self.lbl_change_amount.setText(f"Entregar: {format_bs(over_bs)} en efectivo (Bolivares)")
-            self.lbl_change_amount.setStyleSheet("font-size: 17px; font-weight: 900; color: #F39120;")
+            self.lbl_change_amount.setText("$ 0.00 | Bs. 0,00")
 
     def process_checkout(self):
         payments = []
@@ -495,17 +574,22 @@ class PaymentDialog(QDialog):
         client_name = self.txt_client_name.text().strip() or "Consumidor Final"
         client_id = self.txt_client_id.text().strip() or "V-00000000"
 
+        change_usd = round(self.spn_vuelto_usd.value(), 2) if self.frame_change.isVisible() else 0.0
+        change_bs = round(self.spn_vuelto_bs.value(), 2) if self.frame_change.isVisible() else 0.0
+
         ok, msg, sale_data = PosService.process_sale(
             items=self.items,
             payments=payments,
             client_name=client_name,
-            client_id_doc=client_id
+            client_id_doc=client_id,
+            change_usd=change_usd,
+            change_bs=change_bs
         )
 
         if ok:
             vuelto_msg = ""
-            if self.frame_change.isVisible():
-                vuelto_msg = f"\n\nRECORDATORIO:\n{self.lbl_change_amount.text()}"
+            if self.frame_change.isVisible() and (change_usd > 0 or change_bs > 0):
+                vuelto_msg = f"\n\nRECORDATORIO DE VUELTO ENTREGADO:\n{self.lbl_change_amount.text()}"
 
             QMessageBox.information(
                 self,

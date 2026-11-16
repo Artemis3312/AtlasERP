@@ -238,34 +238,83 @@ class ReportService:
         pdf.set_text_color(34, 42, 42)
         pdf.cell(0, 6, "Detalle Cronologico de Movimientos de Caja:", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+        # Anchos de columnas balanceados para evitar cualquier desborde (Total: 190 mm)
+        col_w_date = 25
+        col_w_type = 18
+        col_w_desc = 81
+        col_w_method = 22
+        col_w_usd = 20
+        col_w_bs = 24
+
         pdf.set_font("helvetica", "B", 7.5)
         pdf.set_fill_color(34, 42, 42)
         pdf.set_text_color(255, 255, 255)
-        pdf.cell(28, 6, "Fecha/Hora", 1, align="C", fill=True)
-        pdf.cell(24, 6, "Tipo", 1, align="C", fill=True)
-        pdf.cell(62, 6, "Descripcion", 1, align="L", fill=True)
-        pdf.cell(26, 6, "Metodo", 1, align="C", fill=True)
-        pdf.cell(24, 6, "Monto USD", 1, align="R", fill=True)
-        pdf.cell(26, 6, "Monto BS", 1, align="R", fill=True)
+        pdf.cell(col_w_date, 6, "Fecha/Hora", 1, align="C", fill=True)
+        pdf.cell(col_w_type, 6, "Tipo", 1, align="C", fill=True)
+        pdf.cell(col_w_desc, 6, "Descripcion", 1, align="L", fill=True)
+        pdf.cell(col_w_method, 6, "Metodo", 1, align="C", fill=True)
+        pdf.cell(col_w_usd, 6, "Monto USD", 1, align="R", fill=True)
+        pdf.cell(col_w_bs, 6, "Monto BS", 1, align="R", fill=True)
         pdf.ln()
 
-        pdf.set_font("helvetica", "", 7)
+        pdf.set_font("helvetica", "", 6.8)
         pdf.set_text_color(34, 42, 42)
         fill = False
 
+        type_display_map = {
+            "AVANCE_EFECTIVO": "AVANCE",
+            "INGRESO_MANUAL": "INGRESO",
+            "EGRESO_MANUAL": "EGRESO",
+            "VENTA": "VENTA",
+            "CIERRE": "CIERRE",
+            "APERTURA": "APERTURA",
+            "VUELTO": "VUELTO"
+        }
+
+        def fit_cell_text(text: str, max_w: float) -> str:
+            val = str(text or "").strip()
+            if not val:
+                return ""
+            target_w = max_w - 2.0
+            if pdf.get_string_width(val) <= target_w:
+                return val
+            while pdf.get_string_width(val) > target_w and len(val) > 3:
+                val = val[:-4] + "..."
+            return val
+
         for m in movements:
             pdf.set_fill_color(248, 246, 240) if fill else pdf.set_fill_color(255, 255, 255)
-            desc = m["description"][:38] + "..." if len(m["description"]) > 40 else m["description"]
-            created = format_dt_display(m["created_at"])
-            m_type = m["type"]
-            method_show = (m["payment_method"] or "").replace("BS_", "").replace("USD_", "")
 
-            pdf.cell(28, 5, created, 1, align="C", fill=fill)
-            pdf.cell(24, 5, m_type, 1, align="C", fill=fill)
-            pdf.cell(62, 5, desc, 1, align="L", fill=fill)
-            pdf.cell(26, 5, method_show, 1, align="C", fill=fill)
-            pdf.cell(24, 5, format_usd(m["amount_usd"]), 1, align="R", fill=fill)
-            pdf.cell(26, 5, format_bs(m["amount_bs"]), 1, align="R", fill=fill)
+            # 1. Fecha / Hora
+            created = fit_cell_text(format_dt_display(m["created_at"]), col_w_date)
+
+            # 2. Tipo formateado (evita que AVANCE_EFECTIVO se desborde)
+            raw_type = str(m.get("type") or "").strip()
+            type_show = type_display_map.get(raw_type, raw_type.replace("_", " "))
+            type_show = fit_cell_text(type_show, col_w_type)
+
+            # 3. Descripción ajustada al ancho disponible
+            desc = fit_cell_text(str(m.get("description") or ""), col_w_desc)
+
+            # 4. Método formateado (múltiples métodos se muestran como MIXTO para no salirse de casilla)
+            raw_method = str(m.get("payment_method") or "").strip()
+            if "," in raw_method:
+                method_show = "MIXTO"
+            else:
+                clean_m = raw_method.replace("BS_", "").replace("USD_", "").replace("_", " ").strip()
+                method_show = clean_m if clean_m else "N/A"
+            method_show = fit_cell_text(method_show, col_w_method)
+
+            # 5. Montos numéricos
+            usd_str = format_usd(m.get("amount_usd", 0.0))
+            bs_str = format_bs(m.get("amount_bs", 0.0))
+
+            pdf.cell(col_w_date, 5, created, 1, align="C", fill=fill)
+            pdf.cell(col_w_type, 5, type_show, 1, align="C", fill=fill)
+            pdf.cell(col_w_desc, 5, desc, 1, align="L", fill=fill)
+            pdf.cell(col_w_method, 5, method_show, 1, align="C", fill=fill)
+            pdf.cell(col_w_usd, 5, usd_str, 1, align="R", fill=fill)
+            pdf.cell(col_w_bs, 5, bs_str, 1, align="R", fill=fill)
             pdf.ln()
             fill = not fill
 

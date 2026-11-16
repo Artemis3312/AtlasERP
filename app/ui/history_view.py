@@ -189,9 +189,23 @@ class HistoryView(QWidget):
             it_id = QTableWidgetItem(str(m["id"]))
             it_date = QTableWidgetItem(format_dt_display(m["created_at"]))
             it_shift = QTableWidgetItem(f"#{m['shift_id']}" if m["shift_id"] else "N/A")
-            it_type = QTableWidgetItem(str(m["type"]))
+
+            raw_type = str(m["type"])
+            type_map = {
+                "AVANCE_EFECTIVO": "AVANCE",
+                "INGRESO_MANUAL": "INGRESO",
+                "EGRESO_MANUAL": "EGRESO"
+            }
+            it_type = QTableWidgetItem(type_map.get(raw_type, raw_type))
             it_desc = QTableWidgetItem(str(m["description"]))
-            it_method = QTableWidgetItem(str(m.get("payment_method") or "").replace("BS_", "").replace("USD_", ""))
+
+            raw_method = str(m.get("payment_method") or "").strip()
+            if "," in raw_method:
+                method_show = "MIXTO"
+            else:
+                method_show = raw_method.replace("BS_", "").replace("USD_", "").replace("_", " ")
+            it_method = QTableWidgetItem(method_show if method_show else "N/A")
+
             it_usd = QTableWidgetItem(format_usd(m["amount_usd"]))
             it_bs = QTableWidgetItem(format_bs(m["amount_bs"]))
 

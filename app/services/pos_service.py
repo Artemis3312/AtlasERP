@@ -33,10 +33,12 @@ class PosService:
         payments: List[Dict[str, Any]],
         client_name: str = "Consumidor Final",
         client_id_doc: str = "V-00000000",
-        notes: str = ""
+        notes: str = "",
+        change_usd: float = 0.0,
+        change_bs: float = 0.0
     ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
-        Procesa una venta completa con múltiples métodos de pago y descuento de inventario.
+        Procesa una venta completa con múltiples métodos de pago, desglose de vuelto y descuento de inventario.
         items: [{'product_id': int, 'code': str, 'name': str, 'qty': float, 'price_usd': float}]
         payments: [{'method': str, 'amount': float, 'currency': 'USD'|'BS', 'reference': str}]
         """
@@ -129,13 +131,16 @@ class PosService:
                 cursor.execute("UPDATE products SET stock = stock - ?, updated_at = ? WHERE id = ?", (qty, ts, prod_id))
 
             # 2. Insertar venta
+            change_usd = round(max(0.0, float(change_usd or 0.0)), 2)
+            change_bs = round(max(0.0, float(change_bs or 0.0)), 2)
+
             invoice_num = PosService.get_next_invoice_number(cursor=cursor)
             cursor.execute("""
                 INSERT INTO sales (invoice_number, shift_id, created_at, client_name, client_id_doc,
-                                   total_usd, total_bs, exchange_rate, status, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?)
+                                   total_usd, total_bs, exchange_rate, status, notes, change_usd, change_bs)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, ?, ?)
             """, (invoice_num, active_shift["id"], ts, client_name or "Consumidor Final",
-                  client_id_doc or "V-00000000", total_usd, total_bs, rate, notes))
+                  client_id_doc or "V-00000000", total_usd, total_bs, rate, notes, change_usd, change_bs))
             sale_id = cursor.lastrowid
 
             # 3. Insertar items
@@ -171,6 +176,20 @@ class PosService:
             """, (active_shift["id"], sale_id, f"Venta {invoice_num} ({client_name})",
                   total_usd, total_bs, methods_used, ts))
 
+            # Registrar vuelto entregado si aplica
+            if change_usd > 0 or change_bs > 0:
+                vuelto_desc_parts = []
+                if change_usd > 0:
+                    vuelto_desc_parts.append(f"${change_usd:,.2f} USD")
+                if change_bs > 0:
+                    vuelto_desc_parts.append(f"Bs. {change_bs:,.2f}")
+                vuelto_desc = f"Vuelto {invoice_num} ({' + '.join(vuelto_desc_parts)})"
+                cursor.execute("""
+                    INSERT INTO cash_movements (shift_id, sale_id, type, description, amount_usd,
+                                               amount_bs, payment_method, created_at)
+                    VALUES (?, ?, 'VUELTO', ?, ?, ?, 'MIXTO', ?)
+                """, (active_shift["id"], sale_id, vuelto_desc, change_usd, change_bs, ts))
+
             conn.commit()
             conn.close()
 
@@ -184,7 +203,9 @@ class PosService:
                 "total_bs": total_bs,
                 "rate": rate,
                 "items_count": len(items),
-                "payments": processed_payments
+                "payments": processed_payments,
+                "change_usd": change_usd,
+                "change_bs": change_bs
             }
             return True, f"Venta {invoice_num} procesada exitosamente.", sale_result
 

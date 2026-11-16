@@ -79,6 +79,8 @@ def init_db():
         exchange_rate REAL NOT NULL,
         status TEXT DEFAULT 'COMPLETED', -- 'COMPLETED', 'CANCELLED'
         notes TEXT,
+        change_usd REAL DEFAULT 0.0,
+        change_bs REAL DEFAULT 0.0,
         FOREIGN KEY (shift_id) REFERENCES shifts(id)
     );
 
@@ -129,11 +131,21 @@ def init_db():
     );
     """)
 
-    # Migración de esquemas existentes si falta la columna unit
+    # Migración de esquemas existentes si falta la columna unit o vueltos
     try:
         cursor.execute("ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'UND'")
     except Exception:
         pass  # La columna ya existe
+
+    try:
+        cursor.execute("ALTER TABLE sales ADD COLUMN change_usd REAL DEFAULT 0.0")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE sales ADD COLUMN change_bs REAL DEFAULT 0.0")
+    except Exception:
+        pass
     defaults = [
         ("system_name", "AtlasERP", "Nombre del sistema"),
         ("business_name", "Inversiones Atlas C.A.", "Nombre comercial del negocio"),
@@ -150,43 +162,55 @@ def init_db():
             VALUES (?, ?, ?, ?)
         """, (key, val, desc, now_iso()))
 
-    # Insertar productos de demostración si la tabla está vacía
-    cursor.execute("SELECT COUNT(*) FROM products")
-    if cursor.fetchone()[0] == 0:
-        seed_products = [
-            ("7591001001", "Harina Pan 1kg", "Víveres", 0.95, 1.25, 65.0, 10.0),
-            ("7591001002", "Arroz Blanco Mary 1kg", "Víveres", 0.85, 1.15, 50.0, 10.0),
-            ("7591001003", "Pasta Primor Espagueti 1kg", "Víveres", 1.10, 1.45, 40.0, 8.0),
-            ("7591001004", "Aceite Vegetal Vatel 1L", "Víveres", 2.10, 2.75, 30.0, 5.0),
-            ("7591001005", "Azúcar Montalbán 1kg", "Víveres", 0.90, 1.20, 45.0, 10.0),
-            ("7591001006", "Café Fama de América 250g", "Bebidas", 1.80, 2.40, 25.0, 5.0),
-            ("7591001007", "Leche en Polvo Campestre 900g", "Lácteos", 5.50, 7.20, 18.0, 4.0),
-            ("7591001008", "Refresco Coca-Cola 2L", "Bebidas", 1.70, 2.25, 35.0, 6.0),
-            ("7591001009", "Margarina Mavesa 500g", "Lácteos", 1.40, 1.85, 28.0, 6.0),
-            ("7591001010", "Atún Margarita en Aceite 140g", "Enlatados", 1.20, 1.65, 40.0, 8.0),
-        ]
-        created = now_iso()
-        for code, name, cat, cost, price, stock, min_s in seed_products:
-            cursor.execute("""
-                INSERT INTO products (code, name, category, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-            """, (code, name, cat, cost, price, stock, min_s, created, created))
+    # Comprobar si ya se completó el ciclo inicial de semillas o si está en modo producción
+    cursor.execute("SELECT value FROM settings WHERE key = 'demo_seeded'")
+    row_demo = cursor.fetchone()
+    demo_seeded = (row_demo["value"] == "1") if row_demo else False
 
-    # Asegurar productos de demostración que incluyan venta por kilogramo
-    cursor.execute("SELECT COUNT(*) FROM products WHERE unit = 'KG'")
-    if cursor.fetchone()[0] == 0:
-        kg_products = [
-            ("7592002001", "Papas Blancas Lavadas", "Vegetales", "KG", 0.90, 1.40, 45.5, 10.0),
-            ("7592002002", "Tomate Perita Maduro", "Vegetales", "KG", 1.10, 1.65, 30.0, 8.0),
-            ("7592002003", "Cebolla Morada Nacional", "Vegetales", "KG", 0.95, 1.35, 25.0, 5.0),
-            ("7592002004", "Queso Blanco Llanero Duro", "Charcutería", "KG", 3.80, 5.20, 20.0, 4.0),
-        ]
-        created = now_iso()
-        for code, name, cat, unit, cost, price, stock, min_s in kg_products:
-            cursor.execute("""
-                INSERT OR IGNORE INTO products (code, name, category, unit, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-            """, (code, name, cat, unit, cost, price, stock, min_s, created, created))
+    if not demo_seeded:
+        # Insertar productos de demostración si la tabla está vacía
+        cursor.execute("SELECT COUNT(*) FROM products")
+        if cursor.fetchone()[0] == 0:
+            seed_products = [
+                ("7591001001", "Harina Pan 1kg", "Víveres", 0.95, 1.25, 65.0, 10.0),
+                ("7591001002", "Arroz Blanco Mary 1kg", "Víveres", 0.85, 1.15, 50.0, 10.0),
+                ("7591001003", "Pasta Primor Espagueti 1kg", "Víveres", 1.10, 1.45, 40.0, 8.0),
+                ("7591001004", "Aceite Vegetal Vatel 1L", "Víveres", 2.10, 2.75, 30.0, 5.0),
+                ("7591001005", "Azúcar Montalbán 1kg", "Víveres", 0.90, 1.20, 45.0, 10.0),
+                ("7591001006", "Café Fama de América 250g", "Bebidas", 1.80, 2.40, 25.0, 5.0),
+                ("7591001007", "Leche en Polvo Campestre 900g", "Lácteos", 5.50, 7.20, 18.0, 4.0),
+                ("7591001008", "Refresco Coca-Cola 2L", "Bebidas", 1.70, 2.25, 35.0, 6.0),
+                ("7591001009", "Margarina Mavesa 500g", "Lácteos", 1.40, 1.85, 28.0, 6.0),
+                ("7591001010", "Atún Margarita en Aceite 140g", "Enlatados", 1.20, 1.65, 40.0, 8.0),
+            ]
+            created = now_iso()
+            for code, name, cat, cost, price, stock, min_s in seed_products:
+                cursor.execute("""
+                    INSERT INTO products (code, name, category, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """, (code, name, cat, cost, price, stock, min_s, created, created))
+
+        # Asegurar productos de demostración que incluyan venta por kilogramo
+        cursor.execute("SELECT COUNT(*) FROM products WHERE unit = 'KG'")
+        if cursor.fetchone()[0] == 0:
+            kg_products = [
+                ("7592002001", "Papas Blancas Lavadas", "Vegetales", "KG", 0.90, 1.40, 45.5, 10.0),
+                ("7592002002", "Tomate Perita Maduro", "Vegetales", "KG", 1.10, 1.65, 30.0, 8.0),
+                ("7592002003", "Cebolla Morada Nacional", "Vegetales", "KG", 0.95, 1.35, 25.0, 5.0),
+                ("7592002004", "Queso Blanco Llanero Duro", "Charcutería", "KG", 3.80, 5.20, 20.0, 4.0),
+            ]
+            created = now_iso()
+            for code, name, cat, unit, cost, price, stock, min_s in kg_products:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO products (code, name, category, unit, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """, (code, name, cat, unit, cost, price, stock, min_s, created, created))
+
+        # Registrar que las semillas iniciales ya fueron gestionadas
+        cursor.execute("""
+            INSERT OR REPLACE INTO settings (key, value, description, updated_at)
+            VALUES ('demo_seeded', '1', 'Estado de semillas iniciales cargadas', ?)
+        """, (now_iso(),))
 
     conn.commit()
     conn.close()

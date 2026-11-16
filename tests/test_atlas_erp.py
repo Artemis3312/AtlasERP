@@ -176,6 +176,53 @@ class TestAtlasERP(unittest.TestCase):
         self.assertTrue(os.path.exists(rep_inv))
         self.assertTrue(os.path.getsize(rep_inv) > 1000)
 
+    def test_07_multiple_change_and_shift_reconciliation(self):
+        """Prueba venta con vuelto múltiple (parte USD y parte Bs) y cuadre de caja."""
+        # 1. Abrir turno nuevo
+        ok, msg, shift_id = ShiftService.open_shift(initial_usd=100.0, initial_bs=5000.0, cashier_name="Cajero Vueltos")
+        self.assertTrue(ok)
+
+        # 2. Venta con vuelto múltiple
+        p = InventoryService.list_products(search_term="Harina Pan")[0]
+        items = [{"product_id": p["id"], "code": p["code"], "name": p["name"], "qty": 2.0, "price_usd": 2.50}]
+        rate = ExchangeRateService.get_active_rate()
+
+        # Cliente paga con billete de $10 USD para compra de $5.00
+        payments = [{"method": "USD_EFECTIVO", "amount": 10.0, "currency": "USD", "reference": ""}]
+        # Vuelto total a entregar: $5.00
+        # Cajero entrega: $2.00 en USD y el restante ($3.00 * rate) en Bs
+        change_usd = 2.00
+        change_bs = round(3.00 * rate, 2)
+
+        ok, msg, sale_res = PosService.process_sale(
+            items=items,
+            payments=payments,
+            client_name="Cliente Vuelto Mixto",
+            change_usd=change_usd,
+            change_bs=change_bs
+        )
+        self.assertTrue(ok, msg)
+        self.assertEqual(sale_res["change_usd"], 2.00)
+        self.assertEqual(sale_res["change_bs"], change_bs)
+
+        # 3. Validar métricas de arqueo
+        metrics = ShiftService.get_shift_metrics(shift_id)
+        # Esperado USD: 100 inicial + 10 pago - 2 vuelto = 108.0
+        self.assertAlmostEqual(metrics["expected_cash_usd"], 108.0, places=2)
+        # Esperado BS: 5000 inicial + 0 pago - change_bs vuelto = 5000 - change_bs
+        expected_bs = round(5000.0 - change_bs, 2)
+        self.assertAlmostEqual(metrics["expected_cash_bs"], expected_bs, places=2)
+
+        # 4. Cerrar turno cuadrado
+        ok, msg, close_res = ShiftService.close_shift(
+            shift_id=shift_id,
+            real_cash_usd=108.0,
+            real_cash_bs=expected_bs
+        )
+        self.assertTrue(ok)
+        self.assertAlmostEqual(close_res["diff_usd"], 0.0, places=2)
+        self.assertAlmostEqual(close_res["diff_bs"], 0.0, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,8 @@ import datetime
 from pathlib import Path
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
-    QStackedWidget, QPushButton, QLabel, QFrame, QButtonGroup
+    QStackedWidget, QPushButton, QLabel, QFrame, QButtonGroup,
+    QMessageBox
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
@@ -324,3 +325,38 @@ class MainWindow(QMainWindow):
 
     def on_inventory_updated(self):
         self.pos_view.load_catalog()
+
+    def closeEvent(self, event):
+        active_shift = ShiftService.get_active_shift()
+        if active_shift:
+            event.ignore()
+            # Alerta formal: No se puede cerrar el sistema sin arquear la caja
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Turno de Caja Abierto")
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(
+                f"<b>ADVERTENCIA: TURNO DE CAJA ACTIVO</b><br><br>"
+                f"El <b>Turno #{active_shift['id']}</b> ({active_shift.get('cashier_name', 'Cajero')}) "
+                f"se encuentra actualmente abierto.<br><br>"
+                f"Para mantener el control y cuadre de efectivo, <b>el programa no se puede cerrar sin antes arquear y cerrar la caja</b>.<br><br>"
+                f"¿Desea realizar el arqueo y cierre de turno ahora para poder salir?"
+            )
+            btn_arqueo = msg_box.addButton("Arquear y Cerrar Caja", QMessageBox.AcceptRole)
+            btn_arqueo.setObjectName("btnSuccess")
+            btn_arqueo.setIcon(get_icon("check", "#222A2A"))
+
+            btn_cancel = msg_box.addButton("Cancelar (Permanecer en el Sistema)", QMessageBox.RejectRole)
+            btn_cancel.setObjectName("btnSecondary")
+
+            msg_box.setDefaultButton(btn_arqueo)
+            msg_box.exec()
+
+            if msg_box.clickedButton() == btn_arqueo:
+                dlg = ShiftCloseDialog(shift_id=active_shift["id"], parent=self)
+                dlg.shift_closed.connect(lambda r: self.on_data_updated())
+                if dlg.exec():
+                    # Si el turno se cerró exitosamente, verificar y aceptar el cierre
+                    if not ShiftService.get_active_shift():
+                        event.accept()
+        else:
+            event.accept()

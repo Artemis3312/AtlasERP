@@ -58,6 +58,7 @@ class ShiftCloseDialog(QDialog):
             f"- Base Inicial: {format_usd(self.metrics.get('initial_cash_usd', 0))} | {format_bs(self.metrics.get('initial_cash_bs', 0))}\n"
             f"- Ventas Efec. USD: +{format_usd(self.metrics.get('sales_usd_cash', 0))}\n"
             f"- Ventas Efec. BS: +{format_bs(self.metrics.get('sales_bs_cash', 0))}\n"
+            f"- Vueltos Entregados: -{format_usd(self.metrics.get('total_change_usd', 0))} | -{format_bs(self.metrics.get('total_change_bs', 0))}\n"
             f"- Avances BS Entregados: -{format_bs(self.metrics.get('advances_dispensed_bs', 0))}"
         )
         lbl_details = QLabel(detalles_txt)
