@@ -2,12 +2,12 @@ import os
 from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QDateEdit, QMessageBox, QFrame, QGridLayout, QListWidget, QListWidgetItem, QFileDialog
+    QPushButton, QDateEdit, QMessageBox, QFrame, QGridLayout, QListWidget, QListWidgetItem
 )
 from PySide6.QtCore import Qt, QDate, QUrl
 from PySide6.QtGui import QDesktopServices
 from ..services.report_service import ReportService, REPORTS_DIR
-from ..utils.helpers import format_dt_display
+from ..utils.icon_helper import get_icon
 
 
 class ReportsView(QWidget):
@@ -22,8 +22,8 @@ class ReportsView(QWidget):
         layout.setSpacing(16)
 
         # Encabezado
-        lbl_head = QLabel("📊 Módulo de Reportes Oficiales en PDF")
-        lbl_head.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        lbl_head = QLabel("Modulo de Reportes Oficiales en PDF")
+        lbl_head.setStyleSheet("font-size: 20px; font-weight: 900; color: #222A2A;")
         layout.addWidget(lbl_head)
 
         grid = QGridLayout()
@@ -37,9 +37,9 @@ class ReportsView(QWidget):
         l_ops = QVBoxLayout(card_ops)
         l_ops.setSpacing(12)
 
-        lbl_ops_title = QLabel("📄 Histórico de Operaciones y Ventas")
-        lbl_ops_title.setStyleSheet("font-size: 15px; font-weight: 700; color: #1E293B;")
-        lbl_ops_desc = QLabel("Genera un documento PDF detallado con todas las ventas, recaudación por método de pago (USD, BS Efectivo, Tarjeta, Pago Móvil), avances de efectivo y movimientos de caja.")
+        lbl_ops_title = QLabel("Historico de Operaciones y Ventas")
+        lbl_ops_title.setStyleSheet("font-size: 15px; font-weight: 800; color: #222A2A;")
+        lbl_ops_desc = QLabel("Genera un documento PDF detallado con todas las ventas, recaudacion por metodo de pago (USD, BS Efectivo, Tarjeta, Pago Movil), avances de efectivo y movimientos de caja.")
         lbl_ops_desc.setWordWrap(True)
         lbl_ops_desc.setStyleSheet("font-size: 11px; color: #64748B;")
 
@@ -67,7 +67,7 @@ class ReportsView(QWidget):
         btn_today.setObjectName("btnSecondary")
         btn_today.clicked.connect(self.set_range_today)
 
-        btn_week = QPushButton("Últimos 7 Días")
+        btn_week = QPushButton("Ultimos 7 Dias")
         btn_week.setObjectName("btnSecondary")
         btn_week.clicked.connect(self.set_range_week)
 
@@ -82,6 +82,7 @@ class ReportsView(QWidget):
 
         self.btn_gen_ops = QPushButton("Generar Reporte de Operaciones (PDF)")
         self.btn_gen_ops.setObjectName("btnSuccess")
+        self.btn_gen_ops.setIcon(get_icon("reports", "#222A2A", size=18))
         self.btn_gen_ops.setStyleSheet("font-size: 13px; font-weight: 700; padding: 10px;")
         self.btn_gen_ops.clicked.connect(self.generate_operations_pdf)
         l_ops.addWidget(self.btn_gen_ops)
@@ -96,9 +97,9 @@ class ReportsView(QWidget):
         l_inv = QVBoxLayout(card_inv)
         l_inv.setSpacing(12)
 
-        lbl_inv_title = QLabel("📦 Reporte de Inventario y Existencias")
-        lbl_inv_title.setStyleSheet("font-size: 15px; font-weight: 700; color: #1E293B;")
-        lbl_inv_desc = QLabel("Genera un documento PDF con el listado completo de productos, stock disponible, valorización global al costo y a precio de venta tanto en USD como en Bolívares (usando la tasa activa), e identifica productos en alerta de stock mínimo.")
+        lbl_inv_title = QLabel("Reporte de Inventario y Existencias")
+        lbl_inv_title.setStyleSheet("font-size: 15px; font-weight: 800; color: #222A2A;")
+        lbl_inv_desc = QLabel("Genera un documento PDF con el listado completo de productos, stock disponible, valorizacion global al costo y a precio de venta tanto en USD como en Bolivares (usando la tasa activa), e identifica productos en alerta de stock minimo.")
         lbl_inv_desc.setWordWrap(True)
         lbl_inv_desc.setStyleSheet("font-size: 11px; color: #64748B;")
 
@@ -107,7 +108,8 @@ class ReportsView(QWidget):
         l_inv.addStretch()
 
         self.btn_gen_inv = QPushButton("Generar Reporte de Inventario (PDF)")
-        self.btn_gen_inv.setObjectName("btnPurple")
+        self.btn_gen_inv.setObjectName("btnWarning")
+        self.btn_gen_inv.setIcon(get_icon("inventory", "#FFFFFF", size=18))
         self.btn_gen_inv.setStyleSheet("font-size: 13px; font-weight: 700; padding: 10px;")
         self.btn_gen_inv.clicked.connect(self.generate_inventory_pdf)
         l_inv.addWidget(self.btn_gen_inv)
@@ -125,16 +127,18 @@ class ReportsView(QWidget):
         l_recent.setSpacing(10)
 
         top_recent = QHBoxLayout()
-        lbl_rec_title = QLabel("📂 Archivos PDF Generados Recientemente")
-        lbl_rec_title.setStyleSheet("font-size: 14px; font-weight: 700; color: #1E293B;")
+        lbl_rec_title = QLabel("Archivos PDF Generados")
+        lbl_rec_title.setStyleSheet("font-size: 14px; font-weight: 800; color: #222A2A;")
 
-        btn_open_folder = QPushButton("📁 Abrir Carpeta de Reportes")
+        btn_open_folder = QPushButton("Abrir Carpeta de Reportes")
         btn_open_folder.setObjectName("btnSecondary")
+        btn_open_folder.setIcon(get_icon("folder", "#222A2A", size=16))
         btn_open_folder.clicked.connect(self.open_reports_folder)
 
-        btn_refresh_list = QPushButton("🔄")
+        btn_refresh_list = QPushButton()
         btn_refresh_list.setObjectName("btnSecondary")
-        btn_refresh_list.setFixedWidth(36)
+        btn_refresh_list.setIcon(get_icon("refresh", "#222A2A", size=15))
+        btn_refresh_list.setFixedSize(32, 32)
         btn_refresh_list.clicked.connect(self.refresh_recent_reports)
 
         top_recent.addWidget(lbl_rec_title)
@@ -144,11 +148,11 @@ class ReportsView(QWidget):
         l_recent.addLayout(top_recent)
 
         self.list_reports = QListWidget()
-        self.list_reports.setStyleSheet("background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px;")
+        self.list_reports.setStyleSheet("background-color: #FAF8F5; border: 1px solid #E2DAC2; border-radius: 6px;")
         self.list_reports.itemDoubleClicked.connect(self.open_selected_report)
         l_recent.addWidget(self.list_reports)
 
-        btn_open_selected = QPushButton("👁️ Abrir PDF Seleccionado")
+        btn_open_selected = QPushButton("Abrir PDF Seleccionado")
         btn_open_selected.setObjectName("btnSecondary")
         btn_open_selected.clicked.connect(self.open_selected_report)
         l_recent.addWidget(btn_open_selected, alignment=Qt.AlignRight)
@@ -181,15 +185,15 @@ class ReportsView(QWidget):
             reply = QMessageBox.question(
                 self,
                 "Reporte Generado",
-                f"✅ Reporte de Operaciones generado exitosamente.\n\n"
-                f"Ubicación:\n{pdf_path}\n\n"
-                f"¿Desea abrir el archivo PDF ahora?",
+                f"Reporte de Operaciones generado exitosamente.\n\n"
+                f"Ubicacion:\n{pdf_path}\n\n"
+                f"Desea abrir el archivo PDF ahora?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
                 self.open_file(pdf_path)
         except Exception as e:
-            QMessageBox.critical(self, "Error al Generar Reporte", f"Ocurrió un error al crear el PDF:\n{str(e)}")
+            QMessageBox.critical(self, "Error al Generar Reporte", f"Ocurrio un error al crear el PDF:\n{str(e)}")
 
     def generate_inventory_pdf(self):
         try:
@@ -199,15 +203,15 @@ class ReportsView(QWidget):
             reply = QMessageBox.question(
                 self,
                 "Reporte de Inventario Generado",
-                f"✅ Reporte de Inventario generado exitosamente.\n\n"
-                f"Ubicación:\n{pdf_path}\n\n"
-                f"¿Desea abrir el archivo PDF ahora?",
+                f"Reporte de Inventario generado exitosamente.\n\n"
+                f"Ubicacion:\n{pdf_path}\n\n"
+                f"Desea abrir el archivo PDF ahora?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
                 self.open_file(pdf_path)
         except Exception as e:
-            QMessageBox.critical(self, "Error al Generar Reporte", f"Ocurrió un error al crear el PDF:\n{str(e)}")
+            QMessageBox.critical(self, "Error al Generar Reporte", f"Ocurrio un error al crear el PDF:\n{str(e)}")
 
     def refresh_recent_reports(self):
         self.list_reports.clear()
@@ -215,7 +219,8 @@ class ReportsView(QWidget):
         pdf_files = sorted(REPORTS_DIR.glob("*.pdf"), key=os.path.getmtime, reverse=True)
 
         for f in pdf_files[:20]:
-            item = QListWidgetItem(f"📄 {f.name}")
+            item = QListWidgetItem(f.name)
+            item.setIcon(get_icon("reports", "#4FBBBC", size=16))
             item.setData(Qt.UserRole, str(f))
             self.list_reports.addItem(item)
 
@@ -235,4 +240,4 @@ class ReportsView(QWidget):
         if os.path.exists(filepath):
             QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
         else:
-            QMessageBox.warning(self, "Archivo No Encontrado", f"No se encontró el archivo:\n{filepath}")
+            QMessageBox.warning(self, "Archivo No Encontrado", f"No se encontro el archivo:\n{filepath}")

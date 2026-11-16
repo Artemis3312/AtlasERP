@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QGroupBox, QMessageBox, QFrame, QRadioButton, QButtonGroup
+    QPushButton, QGroupBox, QMessageBox, QFrame
 )
 from PySide6.QtCore import Qt, Signal, QThread
 from ...services.exchange_rate import ExchangeRateService
 from ...utils.helpers import format_bs, parse_float
+from ...utils.icon_helper import get_icon
 
 
 class RateFetchThread(QThread):
@@ -24,8 +25,8 @@ class RateDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Configurar Tasa de Cambio (USD a Bolívares)")
-        self.setMinimumWidth(460)
+        self.setWindowTitle("Configurar Tasa de Cambio (USD a Bolivares)")
+        self.setMinimumWidth(480)
         self.setup_ui()
         self.load_current_info()
 
@@ -39,9 +40,9 @@ class RateDialog(QDialog):
         card_layout = QVBoxLayout(self.info_card)
 
         self.lbl_current_rate = QLabel()
-        self.lbl_current_rate.setStyleSheet("font-size: 20px; font-weight: 700; color: #166534;")
+        self.lbl_current_rate.setStyleSheet("font-size: 20px; font-weight: 800; color: #222A2A;")
         self.lbl_source = QLabel()
-        self.lbl_source.setStyleSheet("color: #4B5563; font-size: 11px;")
+        self.lbl_source.setStyleSheet("color: #64748B; font-size: 11px;")
 
         card_layout.addWidget(self.lbl_current_rate)
         card_layout.addWidget(self.lbl_source)
@@ -49,7 +50,7 @@ class RateDialog(QDialog):
 
         # Opción 1: Consulta a DolarAPI
         group_api = QGroupBox("Actualizar desde DolarAPI (Requiere Internet / Fallback Offline)")
-        group_api.setStyleSheet("font-weight: 600; color: #1E293B;")
+        group_api.setStyleSheet("font-weight: 700; color: #222A2A;")
         api_layout = QVBoxLayout(group_api)
 
         api_desc = QLabel("Obtiene en tiempo real el valor oficial (BCV) o paralelo de dolarapi.com.")
@@ -58,12 +59,14 @@ class RateDialog(QDialog):
         api_layout.addWidget(api_desc)
 
         btn_row = QHBoxLayout()
-        self.btn_fetch_bcv = QPushButton("🏛️ Consultar Tasa Oficial (BCV)")
+        self.btn_fetch_bcv = QPushButton("Consultar Oficial (BCV)")
         self.btn_fetch_bcv.setObjectName("btnSecondary")
+        self.btn_fetch_bcv.setIcon(get_icon("refresh", "#222A2A", size=15))
         self.btn_fetch_bcv.clicked.connect(lambda: self.fetch_rate("oficial"))
 
-        self.btn_fetch_paralelo = QPushButton("📈 Consultar Tasa Paralelo")
+        self.btn_fetch_paralelo = QPushButton("Consultar Paralelo")
         self.btn_fetch_paralelo.setObjectName("btnSecondary")
+        self.btn_fetch_paralelo.setIcon(get_icon("refresh", "#222A2A", size=15))
         self.btn_fetch_paralelo.clicked.connect(lambda: self.fetch_rate("paralelo"))
 
         btn_row.addWidget(self.btn_fetch_bcv)
@@ -71,7 +74,7 @@ class RateDialog(QDialog):
         api_layout.addLayout(btn_row)
 
         self.lbl_api_status = QLabel("")
-        self.lbl_api_status.setStyleSheet("font-size: 11px; font-weight: normal; color: #2563EB;")
+        self.lbl_api_status.setStyleSheet("font-size: 11px; font-weight: 600; color: #4FBBBC;")
         self.lbl_api_status.setWordWrap(True)
         api_layout.addWidget(self.lbl_api_status)
 
@@ -79,7 +82,7 @@ class RateDialog(QDialog):
 
         # Opción 2: Establecer Manualmente
         group_manual = QGroupBox("Establecer Tasa Manual (100% Offline)")
-        group_manual.setStyleSheet("font-weight: 600; color: #1E293B;")
+        group_manual.setStyleSheet("font-weight: 700; color: #222A2A;")
         manual_layout = QVBoxLayout(group_manual)
 
         manual_desc = QLabel("Ingresa directamente el valor en Bolívares por cada 1 USD:")
@@ -88,11 +91,12 @@ class RateDialog(QDialog):
 
         manual_row = QHBoxLayout()
         self.txt_manual_rate = QLineEdit()
-        self.txt_manual_rate.setPlaceholderText("Ejemplo: 911.62")
-        self.txt_manual_rate.setStyleSheet("font-size: 15px; font-weight: 600;")
+        self.txt_manual_rate.setPlaceholderText("Ejemplo: 950.00")
+        self.txt_manual_rate.setStyleSheet("font-size: 15px; font-weight: 700;")
 
-        self.btn_save_manual = QPushButton("💾 Guardar Tasa Manual")
+        self.btn_save_manual = QPushButton("Guardar Tasa Manual")
         self.btn_save_manual.setObjectName("btnSuccess")
+        self.btn_save_manual.setIcon(get_icon("check", "#222A2A", size=16))
         self.btn_save_manual.clicked.connect(self.save_manual_rate)
 
         manual_row.addWidget(self.txt_manual_rate, 2)
@@ -110,10 +114,10 @@ class RateDialog(QDialog):
     def load_current_info(self):
         info = ExchangeRateService.get_rate_info()
         rate = info["rate"]
-        source = info["source"]
+        source = info["source"].replace("DOLARAPI_", "")
         updated = info["updated_at"]
         self.lbl_current_rate.setText(f"Tasa Activa: {format_bs(rate)} / USD")
-        self.lbl_source.setText(f"Fuente actual: {source} | Última actualización: {updated}")
+        self.lbl_source.setText(f"Fuente actual: {source} | Ultima actualizacion: {updated}")
         self.txt_manual_rate.setText(f"{rate:.2f}")
 
     def fetch_rate(self, source_type: str):
@@ -134,16 +138,16 @@ class RateDialog(QDialog):
                 self,
                 "Tasa Obtenida de DolarAPI",
                 f"Se obtuvo la tasa {source_type.upper()}: {format_bs(rate)} por USD.\n\n"
-                f"¿Desea aplicarla como la tasa activa del sistema?",
+                f"Desea aplicarla como la tasa activa del sistema?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
                 ExchangeRateService.set_rate(rate, source=f"DOLARAPI_{source_type.upper()}")
                 self.load_current_info()
-                self.lbl_api_status.setText(f"✅ Tasa actualizada exitosamente a {format_bs(rate)}")
+                self.lbl_api_status.setText(f"Tasa actualizada exitosamente a {format_bs(rate)}")
                 self.rate_updated.emit(rate)
         else:
-            self.lbl_api_status.setText(f"⚠️ {message}")
+            self.lbl_api_status.setText(message)
             QMessageBox.warning(self, "Aviso DolarAPI", message)
 
     def save_manual_rate(self):
@@ -155,6 +159,6 @@ class RateDialog(QDialog):
         if ExchangeRateService.set_rate(val, source="MANUAL"):
             self.load_current_info()
             self.rate_updated.emit(val)
-            QMessageBox.information(self, "Éxito", f"Tasa manual configurada en {format_bs(val)} / USD.")
+            QMessageBox.information(self, "Exito", f"Tasa manual configurada en {format_bs(val)} / USD.")
         else:
             QMessageBox.warning(self, "Error", "No se pudo actualizar la tasa manual.")

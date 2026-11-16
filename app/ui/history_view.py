@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QDate, Signal
 from ..services.movement_service import MovementService
 from ..services.shift_service import ShiftService
 from ..utils.helpers import format_usd, format_bs, format_dt_display
+from ..utils.icon_helper import get_icon
 from .dialogs.shift_close_dialog import ShiftCloseDialog
 from .dialogs.shift_open_dialog import ShiftOpenDialog
 from .dialogs.manual_movement_dialog import ManualMovementDialog
@@ -23,7 +24,7 @@ class HistoryView(QWidget):
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(14)
+        layout.setSpacing(12)
 
         # Panel de Control de Turno y Arqueo
         self.shift_card = QFrame()
@@ -33,30 +34,33 @@ class HistoryView(QWidget):
 
         # Estado del turno
         self.lbl_shift_title = QLabel("ESTADO DEL TURNO:")
-        self.lbl_shift_title.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 600;")
+        self.lbl_shift_title.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 700;")
         self.lbl_shift_desc = QLabel("Cargando...")
-        self.lbl_shift_desc.setStyleSheet("font-size: 16px; font-weight: 800; color: #0F172A;")
+        self.lbl_shift_desc.setStyleSheet("font-size: 16px; font-weight: 900; color: #222A2A;")
 
         sc_layout.addWidget(self.lbl_shift_title, 0, 0)
         sc_layout.addWidget(self.lbl_shift_desc, 1, 0)
 
         # Resumen de Gaveta
         self.lbl_drawer_summary = QLabel()
-        self.lbl_drawer_summary.setStyleSheet("font-size: 12px; color: #334155;")
+        self.lbl_drawer_summary.setStyleSheet("font-size: 12px; color: #222A2A; font-weight: 500;")
         sc_layout.addWidget(self.lbl_drawer_summary, 0, 1, 2, 1)
 
         # Botones de Operación de Turno
         btn_box = QHBoxLayout()
-        self.btn_open_shift = QPushButton("🟢 Abrir Turno")
+        self.btn_open_shift = QPushButton("Abrir Turno")
         self.btn_open_shift.setObjectName("btnSuccess")
+        self.btn_open_shift.setIcon(get_icon("unlock", "#222A2A", size=16))
         self.btn_open_shift.clicked.connect(self.open_shift_modal)
 
-        self.btn_manual_move = QPushButton("💵 Movimiento Manual (+ / -)")
+        self.btn_manual_move = QPushButton("Movimiento Manual (+ / -)")
         self.btn_manual_move.setObjectName("btnSecondary")
+        self.btn_manual_move.setIcon(get_icon("cash", "#222A2A", size=16))
         self.btn_manual_move.clicked.connect(self.open_manual_movement_modal)
 
-        self.btn_close_shift = QPushButton("🔒 Cerrar Turno y Arquear Caja")
+        self.btn_close_shift = QPushButton("Cerrar Turno y Arquear")
         self.btn_close_shift.setObjectName("btnDanger")
+        self.btn_close_shift.setIcon(get_icon("lock", "#FFFFFF", size=16))
         self.btn_close_shift.setStyleSheet("font-weight: 700; padding: 10px 16px;")
         self.btn_close_shift.clicked.connect(self.open_close_shift_modal)
 
@@ -100,8 +104,9 @@ class HistoryView(QWidget):
         self.date_end.dateChanged.connect(self.load_movements)
         filter_bar.addWidget(self.date_end)
 
-        btn_refresh = QPushButton("🔄 Actualizar")
+        btn_refresh = QPushButton("Actualizar")
         btn_refresh.setObjectName("btnSecondary")
+        btn_refresh.setIcon(get_icon("refresh", "#222A2A", size=15))
         btn_refresh.clicked.connect(self.load_movements)
         filter_bar.addWidget(btn_refresh)
 
@@ -117,15 +122,22 @@ class HistoryView(QWidget):
         ])
         self.tbl_movements.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tbl_movements.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tbl_movements.setColumnWidth(0, 50)
+        self.tbl_movements.setColumnWidth(1, 140)
+        self.tbl_movements.setColumnWidth(2, 70)
+        self.tbl_movements.setColumnWidth(3, 130)
         self.tbl_movements.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.tbl_movements.setColumnWidth(5, 100)
+        self.tbl_movements.setColumnWidth(6, 95)
+        self.tbl_movements.setColumnWidth(7, 125)
         layout.addWidget(self.tbl_movements)
 
     def refresh_active_shift(self):
         shift = ShiftService.get_active_shift()
         if shift:
             s_id = shift["id"]
-            self.lbl_shift_desc.setText(f"🟢 Turno #{s_id} ABIERTO")
-            self.lbl_shift_desc.setStyleSheet("font-size: 16px; font-weight: 800; color: #166534;")
+            self.lbl_shift_desc.setText(f"Turno #{s_id} ABIERTO")
+            self.lbl_shift_desc.setStyleSheet("font-size: 16px; font-weight: 900; color: #4FBBBC;")
 
             metrics = ShiftService.get_shift_metrics(s_id)
             exp_usd = metrics.get("expected_cash_usd", 0.0)
@@ -134,16 +146,16 @@ class HistoryView(QWidget):
             pm = metrics.get("total_pago_movil_bs", 0.0)
 
             self.lbl_drawer_summary.setText(
-                f"💵 Efectivo en Gaveta: {format_usd(exp_usd)}  |  {format_bs(exp_bs)}\n"
-                f"💳 Tarjeta POS: {format_bs(card)}  |  📱 Pago Móvil: {format_bs(pm)}"
+                f"Efectivo en Gaveta: {format_usd(exp_usd)}  |  {format_bs(exp_bs)}\n"
+                f"Tarjeta POS: {format_bs(card)}  |  Pago Móvil: {format_bs(pm)}"
             )
 
             self.btn_open_shift.setEnabled(False)
             self.btn_close_shift.setEnabled(True)
             self.btn_manual_move.setEnabled(True)
         else:
-            self.lbl_shift_desc.setText("🔴 Turno CERRADO")
-            self.lbl_shift_desc.setStyleSheet("font-size: 16px; font-weight: 800; color: #991B1B;")
+            self.lbl_shift_desc.setText("Turno CERRADO")
+            self.lbl_shift_desc.setStyleSheet("font-size: 16px; font-weight: 900; color: #EC4624;")
             self.lbl_drawer_summary.setText("No hay turno abierto. Abra un turno para registrar ventas y movimientos.")
             self.btn_open_shift.setEnabled(True)
             self.btn_close_shift.setEnabled(False)
@@ -191,7 +203,6 @@ class HistoryView(QWidget):
             it_usd.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             it_bs.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-            # Colorear según tipo
             if m["type"] == "VENTA":
                 it_type.setForeground(Qt.darkGreen)
             elif m["type"] == "AVANCE_EFECTIVO":
@@ -218,7 +229,7 @@ class HistoryView(QWidget):
     def open_close_shift_modal(self):
         shift = ShiftService.get_active_shift()
         if not shift:
-            QMessageBox.information(self, "Aviso", "No hay ningún turno abierto actualmente.")
+            QMessageBox.information(self, "Aviso", "No hay ningun turno abierto actualmente.")
             return
 
         dlg = ShiftCloseDialog(shift_id=shift["id"], parent=self)

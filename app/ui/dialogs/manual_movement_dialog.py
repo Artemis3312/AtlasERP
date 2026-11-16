@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from ...services.movement_service import MovementService
+from ...utils.icon_helper import get_icon
 
 
 class ManualMovementDialog(QDialog):
@@ -12,12 +13,13 @@ class ManualMovementDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Registrar Movimiento Manual de Caja")
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(440)
         self.setup_ui()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(14)
+        layout.setContentsMargins(18, 18, 18, 18)
 
         card = QFrame()
         card.setObjectName("card")
@@ -41,15 +43,15 @@ class ManualMovementDialog(QDialog):
         self.spn_bs.setValue(0.0)
 
         self.txt_desc = QLineEdit()
-        self.txt_desc.setPlaceholderText("Ej: Pago de proveedor de hielo / Inyección de sencillo")
+        self.txt_desc.setPlaceholderText("Ej: Pago de proveedor / Inyeccion de sencillo")
 
         self.txt_ref = QLineEdit()
-        self.txt_ref.setPlaceholderText("Nro de recibo o comprobante (Opcional)")
+        self.txt_ref.setPlaceholderText("Numero de recibo o comprobante (Opcional)")
 
         form_layout.addRow("Tipo de Movimiento:", self.cmb_type)
         form_layout.addRow("Monto en USD:", self.spn_usd)
-        form_layout.addRow("Monto en Bolívares:", self.spn_bs)
-        form_layout.addRow("Descripción / Motivo *:", self.txt_desc)
+        form_layout.addRow("Monto en Bolivares:", self.spn_bs)
+        form_layout.addRow("Descripcion / Motivo *:", self.txt_desc)
         form_layout.addRow("Referencia / Recibo:", self.txt_ref)
 
         layout.addWidget(card)
@@ -60,8 +62,9 @@ class ManualMovementDialog(QDialog):
         btn_cancel.setObjectName("btnSecondary")
         btn_cancel.clicked.connect(self.reject)
 
-        btn_save = QPushButton("💾 Registrar Movimiento")
+        btn_save = QPushButton("Registrar Movimiento")
         btn_save.setObjectName("btnSuccess")
+        btn_save.setIcon(get_icon("check", "#222A2A", size=16))
         btn_save.clicked.connect(self.save)
 
         btn_box.addStretch()
@@ -77,11 +80,11 @@ class ManualMovementDialog(QDialog):
         ref = self.txt_ref.text().strip()
 
         if usd <= 0 and bs <= 0:
-            QMessageBox.warning(self, "Monto Inválido", "Debe indicar un monto mayor a 0 en USD o en Bolívares.")
+            QMessageBox.warning(self, "Monto Invalido", "Debe indicar un monto mayor a 0 en USD o en Bolivares.")
             return
 
         if not desc:
-            QMessageBox.warning(self, "Descripción Requerida", "Debe ingresar el motivo del movimiento.")
+            QMessageBox.warning(self, "Descripcion Requerida", "Debe ingresar el motivo del movimiento.")
             self.txt_desc.setFocus()
             return
 

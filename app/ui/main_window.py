@@ -1,9 +1,11 @@
 import datetime
+from pathlib import Path
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
-    QStackedWidget, QPushButton, QLabel, QFrame, QButtonGroup, QMessageBox
+    QStackedWidget, QPushButton, QLabel, QFrame, QButtonGroup
 )
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QIcon
 from .styles import MODERN_STYLE
 from .home_view import HomeView
 from .pos_view import PosView
@@ -16,15 +18,21 @@ from .dialogs.shift_close_dialog import ShiftCloseDialog
 from ..services.exchange_rate import ExchangeRateService
 from ..services.shift_service import ShiftService
 from ..utils.helpers import format_bs
+from ..utils.icon_helper import get_icon, get_stateful_icon
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AtlasERP - Sistema de Gestión y Punto de Venta Offline")
+        self.setWindowTitle("AtlasERP - Sistema de Gestion y Punto de Venta Offline")
         self.resize(1240, 780)
-        self.setMinimumSize(1000, 650)
+        self.setMinimumSize(1020, 660)
         self.setStyleSheet(MODERN_STYLE)
+
+        # Cargar icono de aplicación si existe
+        app_icon_path = Path("img/atlaserp.ico")
+        if app_icon_path.exists():
+            self.setWindowIcon(QIcon(str(app_icon_path)))
 
         self.setup_ui()
         self.setup_timers()
@@ -48,11 +56,20 @@ class MainWindow(QMainWindow):
         sidebar_layout.setContentsMargins(0, 0, 0, 16)
         sidebar_layout.setSpacing(6)
 
-        # Header de la Barra Lateral
+        # Header de la Barra Lateral con Logo
         sb_header = QFrame()
         sb_header.setObjectName("sidebarHeader")
         sb_h_layout = QVBoxLayout(sb_header)
-        sb_h_layout.setContentsMargins(18, 18, 18, 18)
+        sb_h_layout.setContentsMargins(18, 16, 18, 16)
+        sb_h_layout.setSpacing(6)
+
+        # Logo SVG de AtlasERP si está disponible
+        logo_svg = Path("img/atlaserp-icon-sin-fondo.svg")
+        if logo_svg.exists():
+            lbl_logo_svg = QLabel()
+            lbl_logo_svg.setStyleSheet("background: transparent;")
+            lbl_logo_svg.setPixmap(get_icon("inventory", "#4FBBBC", size=36).pixmap(36, 36))
+            sb_h_layout.addWidget(lbl_logo_svg)
 
         lbl_logo = QLabel("AtlasERP")
         lbl_logo.setObjectName("sidebarTitle")
@@ -66,29 +83,34 @@ class MainWindow(QMainWindow):
 
         sidebar_layout.addSpacing(10)
 
-        # Botones de Navegación
+        # Botones de Navegación con Iconos SVG (Sin Emojis)
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
 
-        self.btn_nav_home = QPushButton("🏠   Inicio")
+        self.btn_nav_home = QPushButton("  Inicio")
         self.btn_nav_home.setObjectName("navButton")
+        self.btn_nav_home.setIcon(get_stateful_icon("home", "#E2DAC2", "#222A2A"))
         self.btn_nav_home.setCheckable(True)
         self.btn_nav_home.setChecked(True)
 
-        self.btn_nav_pos = QPushButton("🛒   Caja (P.O.S.)")
+        self.btn_nav_pos = QPushButton("  Caja (P.O.S.)")
         self.btn_nav_pos.setObjectName("navButton")
+        self.btn_nav_pos.setIcon(get_stateful_icon("pos", "#E2DAC2", "#222A2A"))
         self.btn_nav_pos.setCheckable(True)
 
-        self.btn_nav_inv = QPushButton("📦   Inventario")
+        self.btn_nav_inv = QPushButton("  Inventario")
         self.btn_nav_inv.setObjectName("navButton")
+        self.btn_nav_inv.setIcon(get_stateful_icon("inventory", "#E2DAC2", "#222A2A"))
         self.btn_nav_inv.setCheckable(True)
 
-        self.btn_nav_history = QPushButton("📋   Historial y Arqueo")
+        self.btn_nav_history = QPushButton("  Historial y Arqueo")
         self.btn_nav_history.setObjectName("navButton")
+        self.btn_nav_history.setIcon(get_stateful_icon("history", "#E2DAC2", "#222A2A"))
         self.btn_nav_history.setCheckable(True)
 
-        self.btn_nav_reports = QPushButton("📊   Reportes PDF")
+        self.btn_nav_reports = QPushButton("  Reportes PDF")
         self.btn_nav_reports.setObjectName("navButton")
+        self.btn_nav_reports.setIcon(get_stateful_icon("reports", "#E2DAC2", "#222A2A"))
         self.btn_nav_reports.setCheckable(True)
 
         nav_buttons = [
@@ -107,9 +129,9 @@ class MainWindow(QMainWindow):
 
         sidebar_layout.addStretch()
 
-        # Versión / Pie de barra lateral
+        # Versión en el pie de la barra lateral (Con fondo transparente y color armónico)
         lbl_ver = QLabel("AtlasERP v1.0.0\n100% Offline | SQLite")
-        lbl_ver.setStyleSheet("color: #64748B; font-size: 10px; padding: 0 18px;")
+        lbl_ver.setObjectName("sidebarFooter")
         sidebar_layout.addWidget(lbl_ver)
 
         root_layout.addWidget(sidebar)
@@ -126,12 +148,12 @@ class MainWindow(QMainWindow):
         top_header = QFrame()
         top_header.setObjectName("topHeader")
         th_layout = QHBoxLayout(top_header)
-        th_layout.setContentsMargins(18, 10, 18, 10)
+        th_layout.setContentsMargins(18, 8, 18, 8)
         th_layout.setSpacing(14)
 
         # Reloj / Fecha
         self.lbl_clock = QLabel()
-        self.lbl_clock.setStyleSheet("font-size: 12px; color: #64748B; font-weight: 600;")
+        self.lbl_clock.setStyleSheet("font-size: 12px; color: #222A2A; font-weight: 600;")
         th_layout.addWidget(self.lbl_clock)
 
         th_layout.addStretch()
@@ -140,22 +162,23 @@ class MainWindow(QMainWindow):
         self.rate_frame = QFrame()
         self.rate_frame.setStyleSheet("""
             QFrame {
-                background-color: #F1F5F9;
-                border: 1px solid #CBD5E1;
+                background-color: #FAF8F5;
+                border: 1px solid #D5CEB9;
                 border-radius: 6px;
-                padding: 3px 8px;
+                padding: 2px 8px;
             }
         """)
         rf_layout = QHBoxLayout(self.rate_frame)
-        rf_layout.setContentsMargins(4, 2, 4, 2)
+        rf_layout.setContentsMargins(6, 2, 6, 2)
         rf_layout.setSpacing(8)
 
         self.lbl_header_rate = QLabel("Tasa: Bs. 0,00")
-        self.lbl_header_rate.setStyleSheet("font-weight: 700; color: #1E293B; font-size: 12px;")
+        self.lbl_header_rate.setStyleSheet("font-weight: 800; color: #222A2A; font-size: 12px;")
 
-        self.btn_adjust_rate = QPushButton("⚙️ Ajustar Tasa")
+        self.btn_adjust_rate = QPushButton("Ajustar Tasa")
         self.btn_adjust_rate.setObjectName("btnSecondary")
-        self.btn_adjust_rate.setStyleSheet("font-size: 11px; padding: 3px 8px;")
+        self.btn_adjust_rate.setIcon(get_icon("settings", "#222A2A", size=14))
+        self.btn_adjust_rate.setStyleSheet("font-size: 11px; padding: 4px 8px;")
         self.btn_adjust_rate.clicked.connect(self.open_rate_dialog)
 
         rf_layout.addWidget(self.lbl_header_rate)
@@ -166,21 +189,21 @@ class MainWindow(QMainWindow):
         self.shift_frame = QFrame()
         self.shift_frame.setStyleSheet("""
             QFrame {
-                background-color: #F1F5F9;
-                border: 1px solid #CBD5E1;
+                background-color: #FAF8F5;
+                border: 1px solid #D5CEB9;
                 border-radius: 6px;
-                padding: 3px 8px;
+                padding: 2px 8px;
             }
         """)
         sf_layout = QHBoxLayout(self.shift_frame)
-        sf_layout.setContentsMargins(4, 2, 4, 2)
+        sf_layout.setContentsMargins(6, 2, 6, 2)
         sf_layout.setSpacing(8)
 
         self.lbl_header_shift = QLabel("Turno: Cerrado")
-        self.lbl_header_shift.setStyleSheet("font-weight: 700; font-size: 12px;")
+        self.lbl_header_shift.setStyleSheet("font-weight: 800; font-size: 12px;")
 
         self.btn_shift_action = QPushButton("Turno")
-        self.btn_shift_action.setStyleSheet("font-size: 11px; padding: 3px 8px;")
+        self.btn_shift_action.setStyleSheet("font-size: 11px; padding: 4px 10px;")
         self.btn_shift_action.clicked.connect(self.toggle_shift_action)
 
         sf_layout.addWidget(self.lbl_header_shift)
@@ -216,7 +239,6 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(content_container)
 
     def setup_timers(self):
-        # Actualización de reloj cada segundo
         self.clock_timer = QTimer(self)
         self.clock_timer.timeout.connect(self.update_clock)
         self.clock_timer.start(1000)
@@ -224,31 +246,30 @@ class MainWindow(QMainWindow):
 
     def update_clock(self):
         now = datetime.datetime.now()
-        self.lbl_clock.setText(now.strftime("📅 %A, %d de %B de %Y  |  ⏰ %I:%M:%S %p"))
+        self.lbl_clock.setText(now.strftime("%A, %d de %B de %Y  |  %I:%M:%S %p"))
 
     def refresh_global_header(self):
-        # 1. Tasa
         info = ExchangeRateService.get_rate_info()
         rate = info["rate"]
         source = info["source"].replace("DOLARAPI_", "")
-        self.lbl_header_rate.setText(f"💵 Tasa: {format_bs(rate)} / USD ({source})")
+        self.lbl_header_rate.setText(f"Tasa: {format_bs(rate)} / USD ({source})")
 
-        # 2. Turno
         shift = ShiftService.get_active_shift()
         if shift:
-            self.lbl_header_shift.setText(f"🟢 Turno #{shift['id']} Abierto")
-            self.lbl_header_shift.setStyleSheet("font-weight: 700; color: #166534; font-size: 12px;")
-            self.btn_shift_action.setText("🔒 Cerrar")
+            self.lbl_header_shift.setText(f"Turno #{shift['id']} Abierto")
+            self.lbl_header_shift.setStyleSheet("font-weight: 800; color: #4FBBBC; font-size: 12px;")
+            self.btn_shift_action.setText("Cerrar")
+            self.btn_shift_action.setIcon(get_icon("lock", "#FFFFFF", size=14))
             self.btn_shift_action.setObjectName("btnDanger")
             self.btn_shift_action.setStyleSheet("")
         else:
-            self.lbl_header_shift.setText("🔴 Turno Cerrado")
-            self.lbl_header_shift.setStyleSheet("font-weight: 700; color: #991B1B; font-size: 12px;")
-            self.btn_shift_action.setText("🟢 Abrir")
+            self.lbl_header_shift.setText("Turno Cerrado")
+            self.lbl_header_shift.setStyleSheet("font-weight: 800; color: #EC4624; font-size: 12px;")
+            self.btn_shift_action.setText("Abrir")
+            self.btn_shift_action.setIcon(get_icon("unlock", "#222A2A", size=14))
             self.btn_shift_action.setObjectName("btnSuccess")
             self.btn_shift_action.setStyleSheet("")
 
-        # Actualizar vistas hijas
         self.home_view.refresh_status()
         self.pos_view.refresh_shift_banner()
         self.history_view.refresh_active_shift()

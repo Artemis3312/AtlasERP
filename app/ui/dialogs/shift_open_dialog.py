@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from ...services.shift_service import ShiftService
+from ...utils.icon_helper import get_icon
 
 
 class ShiftOpenDialog(QDialog):
@@ -12,12 +13,13 @@ class ShiftOpenDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Apertura de Turno de Caja")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(420)
         self.setup_ui()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(14)
+        layout.setContentsMargins(18, 18, 18, 18)
 
         card = QFrame()
         card.setObjectName("cardHighlight")
@@ -51,8 +53,9 @@ class ShiftOpenDialog(QDialog):
         btn_cancel.setObjectName("btnSecondary")
         btn_cancel.clicked.connect(self.reject)
 
-        btn_open = QPushButton("🟢 Abrir Turno")
+        btn_open = QPushButton("Abrir Turno")
         btn_open.setObjectName("btnSuccess")
+        btn_open.setIcon(get_icon("unlock", "#222A2A", size=16))
         btn_open.clicked.connect(self.process_open)
 
         btn_box.addStretch()
@@ -71,4 +74,4 @@ class ShiftOpenDialog(QDialog):
             self.shift_opened.emit(shift_id)
             self.accept()
         else:
-            QMessageBox.warning(self, "Atención", msg)
+            QMessageBox.warning(self, "Atencion", msg)

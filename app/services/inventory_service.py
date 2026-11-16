@@ -48,11 +48,14 @@ class InventoryService:
 
     @staticmethod
     def save_product(product_id: Optional[int], code: str, name: str, category: str,
-                     cost_usd: float, price_usd: float, stock: float, min_stock: float) -> Tuple[bool, str]:
+                     cost_usd: float, price_usd: float, stock: float, min_stock: float, unit: str = "UND") -> Tuple[bool, str]:
         """Crea o actualiza un producto validando unicidad de código"""
         code = str(code).strip()
         name = str(name).strip()
         category = str(category).strip() or "General"
+        unit = str(unit).strip().upper() if unit else "UND"
+        if unit not in ("UND", "KG"):
+            unit = "UND"
         cost_usd = parse_float(cost_usd, 0.0)
         price_usd = parse_float(price_usd, 0.0)
         stock = parse_float(stock, 0.0)
@@ -79,10 +82,10 @@ class InventoryService:
 
                 cursor.execute("""
                     UPDATE products
-                    SET code = ?, name = ?, category = ?, cost_usd = ?, price_usd = ?,
+                    SET code = ?, name = ?, category = ?, unit = ?, cost_usd = ?, price_usd = ?,
                         stock = ?, min_stock = ?, updated_at = ?
                     WHERE id = ?
-                """, (code, name, category, cost_usd, price_usd, stock, min_stock, ts, product_id))
+                """, (code, name, category, unit, cost_usd, price_usd, stock, min_stock, ts, product_id))
                 conn.commit()
                 conn.close()
                 return True, "Producto actualizado exitosamente."
@@ -94,9 +97,9 @@ class InventoryService:
                     return False, f"Ya existe un producto con el código '{code}'."
 
                 cursor.execute("""
-                    INSERT INTO products (code, name, category, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-                """, (code, name, category, cost_usd, price_usd, stock, min_stock, ts, ts))
+                    INSERT INTO products (code, name, category, unit, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """, (code, name, category, unit, cost_usd, price_usd, stock, min_stock, ts, ts))
                 conn.commit()
                 conn.close()
                 return True, "Producto registrado exitosamente."

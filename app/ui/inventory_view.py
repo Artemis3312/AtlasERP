@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, Signal
 from ..services.inventory_service import InventoryService
 from ..services.exchange_rate import ExchangeRateService
 from ..utils.helpers import format_usd, format_bs, format_qty
+from ..utils.icon_helper import get_icon
 from .dialogs.product_dialog import ProductDialog
 
 
@@ -22,7 +23,7 @@ class InventoryView(QWidget):
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(14)
+        layout.setSpacing(12)
 
         # KPIs superiores
         kpi_card = QFrame()
@@ -33,19 +34,19 @@ class InventoryView(QWidget):
         # KPI 1: Total Productos
         b1 = QVBoxLayout()
         l1 = QLabel("TOTAL PRODUCTOS")
-        l1.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 600;")
+        l1.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 700;")
         self.lbl_kpi_total = QLabel("0")
-        self.lbl_kpi_total.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        self.lbl_kpi_total.setStyleSheet("font-size: 20px; font-weight: 900; color: #222A2A;")
         b1.addWidget(l1)
         b1.addWidget(self.lbl_kpi_total)
         kpi_layout.addLayout(b1, 0, 0)
 
         # KPI 2: Total Unidades
         b2 = QVBoxLayout()
-        l2 = QLabel("UNIDADES EN STOCK")
-        l2.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 600;")
+        l2 = QLabel("EXISTENCIA TOTAL")
+        l2.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 700;")
         self.lbl_kpi_units = QLabel("0")
-        self.lbl_kpi_units.setStyleSheet("font-size: 20px; font-weight: 800; color: #2563EB;")
+        self.lbl_kpi_units.setStyleSheet("font-size: 20px; font-weight: 900; color: #4FBBBC;")
         b2.addWidget(l2)
         b2.addWidget(self.lbl_kpi_units)
         kpi_layout.addLayout(b2, 0, 1)
@@ -53,9 +54,9 @@ class InventoryView(QWidget):
         # KPI 3: Valor al Costo USD
         b3 = QVBoxLayout()
         l3 = QLabel("VALOR AL COSTO")
-        l3.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 600;")
+        l3.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 700;")
         self.lbl_kpi_cost = QLabel("$ 0.00")
-        self.lbl_kpi_cost.setStyleSheet("font-size: 20px; font-weight: 800; color: #475569;")
+        self.lbl_kpi_cost.setStyleSheet("font-size: 20px; font-weight: 900; color: #222A2A;")
         b3.addWidget(l3)
         b3.addWidget(self.lbl_kpi_cost)
         kpi_layout.addLayout(b3, 0, 2)
@@ -63,9 +64,9 @@ class InventoryView(QWidget):
         # KPI 4: Valor de Venta USD
         b4 = QVBoxLayout()
         l4 = QLabel("VALOR DE VENTA (USD)")
-        l4.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 600;")
+        l4.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 700;")
         self.lbl_kpi_retail = QLabel("$ 0.00")
-        self.lbl_kpi_retail.setStyleSheet("font-size: 20px; font-weight: 800; color: #059669;")
+        self.lbl_kpi_retail.setStyleSheet("font-size: 20px; font-weight: 900; color: #F39120;")
         b4.addWidget(l4)
         b4.addWidget(self.lbl_kpi_retail)
         kpi_layout.addLayout(b4, 0, 3)
@@ -73,9 +74,9 @@ class InventoryView(QWidget):
         # KPI 5: Stock Bajo
         b5 = QVBoxLayout()
         l5 = QLabel("ALERTAS STOCK BAJO")
-        l5.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 600;")
+        l5.setStyleSheet("font-size: 10px; color: #64748B; font-weight: 700;")
         self.lbl_kpi_low = QLabel("0")
-        self.lbl_kpi_low.setStyleSheet("font-size: 20px; font-weight: 800; color: #E11D48;")
+        self.lbl_kpi_low.setStyleSheet("font-size: 20px; font-weight: 900; color: #EC4624;")
         b5.addWidget(l5)
         b5.addWidget(self.lbl_kpi_low)
         kpi_layout.addLayout(b5, 0, 4)
@@ -87,23 +88,27 @@ class InventoryView(QWidget):
         action_bar.setSpacing(10)
 
         self.txt_filter = QLineEdit()
-        self.txt_filter.setPlaceholderText("🔍 Filtrar productos por nombre, código o categoría...")
+        self.txt_filter.setPlaceholderText("Buscar productos por nombre, código o categoría...")
         self.txt_filter.textChanged.connect(self.load_inventory)
 
-        btn_new = QPushButton("➕ Nuevo Producto")
+        btn_new = QPushButton("Nuevo Producto")
         btn_new.setObjectName("btnSuccess")
+        btn_new.setIcon(get_icon("plus", "#222A2A", size=16))
         btn_new.clicked.connect(self.open_new_product_dialog)
 
-        btn_edit = QPushButton("✏️ Editar")
+        btn_edit = QPushButton("Editar")
         btn_edit.setObjectName("btnSecondary")
+        btn_edit.setIcon(get_icon("edit", "#222A2A", size=16))
         btn_edit.clicked.connect(self.open_edit_product_dialog)
 
-        btn_delete = QPushButton("🗑️ Eliminar")
+        btn_delete = QPushButton("Eliminar")
         btn_delete.setObjectName("btnDanger")
+        btn_delete.setIcon(get_icon("trash", "#FFFFFF", size=16))
         btn_delete.clicked.connect(self.delete_product)
 
-        btn_refresh = QPushButton("🔄 Refrescar")
+        btn_refresh = QPushButton("Refrescar")
         btn_refresh.setObjectName("btnSecondary")
+        btn_refresh.setIcon(get_icon("refresh", "#222A2A", size=16))
         btn_refresh.clicked.connect(self.load_inventory)
 
         action_bar.addWidget(self.txt_filter, 2)
@@ -115,14 +120,23 @@ class InventoryView(QWidget):
 
         # Tabla de Productos
         self.tbl_products = QTableWidget()
-        self.tbl_products.setColumnCount(9)
+        self.tbl_products.setColumnCount(10)
         self.tbl_products.setHorizontalHeaderLabels([
-            "ID", "Código / SKU", "Nombre del Producto", "Categoría",
+            "ID", "Código / SKU", "Nombre del Producto", "Categoría", "Unidad",
             "Costo USD", "Precio USD", "Precio Bolívares", "Stock", "Estado"
         ])
         self.tbl_products.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tbl_products.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tbl_products.setColumnWidth(0, 40)
+        self.tbl_products.setColumnWidth(1, 95)
         self.tbl_products.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.tbl_products.setColumnWidth(3, 90)
+        self.tbl_products.setColumnWidth(4, 60)
+        self.tbl_products.setColumnWidth(5, 75)
+        self.tbl_products.setColumnWidth(6, 75)
+        self.tbl_products.setColumnWidth(7, 105)
+        self.tbl_products.setColumnWidth(8, 90)
+        self.tbl_products.setColumnWidth(9, 80)
         self.tbl_products.doubleClicked.connect(self.open_edit_product_dialog)
         layout.addWidget(self.tbl_products)
 
@@ -135,14 +149,12 @@ class InventoryView(QWidget):
         products = InventoryService.list_products(search_term, active_only=True)
         summary = InventoryService.get_inventory_summary()
 
-        # Actualizar KPIs
         self.lbl_kpi_total.setText(str(summary["total_items"]))
         self.lbl_kpi_units.setText(format_qty(summary["total_units"]))
         self.lbl_kpi_cost.setText(format_usd(summary["total_cost_usd"]))
         self.lbl_kpi_retail.setText(format_usd(summary["total_retail_usd"]))
         self.lbl_kpi_low.setText(str(summary["low_stock_count"]))
 
-        # Llenar Tabla
         self.tbl_products.setRowCount(len(products))
 
         for row, p in enumerate(products):
@@ -151,18 +163,19 @@ class InventoryView(QWidget):
             cost_usd = float(p.get("cost_usd", 0.0) or 0.0)
             stock = float(p.get("stock", 0.0) or 0.0)
             min_stock = float(p.get("min_stock", 5.0) or 5.0)
+            unit = p.get("unit", "UND") or "UND"
 
             it_id = QTableWidgetItem(str(p["id"]))
             it_id.setData(Qt.UserRole, p)
             it_code = QTableWidgetItem(str(p["code"]))
             it_name = QTableWidgetItem(str(p["name"]))
             it_cat = QTableWidgetItem(str(p["category"]))
+            it_unit = QTableWidgetItem(unit)
             it_cost = QTableWidgetItem(format_usd(cost_usd))
             it_price_usd = QTableWidgetItem(format_usd(price_usd))
             it_price_bs = QTableWidgetItem(format_bs(price_bs))
-            it_stock = QTableWidgetItem(f"{format_qty(stock)} / {format_qty(min_stock)}")
+            it_stock = QTableWidgetItem(f"{format_qty(stock, unit)} (min {format_qty(min_stock)})")
 
-            # Badge de Estado
             if stock <= 0:
                 it_status = QTableWidgetItem("Agotado")
                 it_status.setForeground(Qt.red)
@@ -174,6 +187,7 @@ class InventoryView(QWidget):
                 it_status.setForeground(Qt.darkGreen)
 
             it_id.setTextAlignment(Qt.AlignCenter)
+            it_unit.setTextAlignment(Qt.AlignCenter)
             it_cost.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             it_price_usd.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             it_price_bs.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -184,11 +198,12 @@ class InventoryView(QWidget):
             self.tbl_products.setItem(row, 1, it_code)
             self.tbl_products.setItem(row, 2, it_name)
             self.tbl_products.setItem(row, 3, it_cat)
-            self.tbl_products.setItem(row, 4, it_cost)
-            self.tbl_products.setItem(row, 5, it_price_usd)
-            self.tbl_products.setItem(row, 6, it_price_bs)
-            self.tbl_products.setItem(row, 7, it_stock)
-            self.tbl_products.setItem(row, 8, it_status)
+            self.tbl_products.setItem(row, 4, it_unit)
+            self.tbl_products.setItem(row, 5, it_cost)
+            self.tbl_products.setItem(row, 6, it_price_usd)
+            self.tbl_products.setItem(row, 7, it_price_bs)
+            self.tbl_products.setItem(row, 8, it_stock)
+            self.tbl_products.setItem(row, 9, it_status)
 
     def open_new_product_dialog(self):
         dlg = ProductDialog(parent=self)
@@ -227,8 +242,8 @@ class InventoryView(QWidget):
 
         reply = QMessageBox.question(
             self,
-            "Confirmar Eliminación",
-            f"¿Está seguro de eliminar el producto '{prod['name']}' ({prod['code']})?",
+            "Confirmar Eliminacion",
+            f"Desea eliminar el producto '{prod['name']}' ({prod['code']})?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:

@@ -25,13 +25,16 @@ def format_bs(amount: float) -> str:
         return "Bs. 0,00"
 
 
-def format_qty(qty: float) -> str:
-    """Formatea cantidades (entero si no tiene decimales, float con 2 decimales si tiene)"""
+def format_qty(qty: float, unit: str = "") -> str:
+    """Formatea cantidades: entero si no tiene decimales (ej: 1 en vez de 1,00), o con decimales limpios para KG."""
     try:
         val = float(qty or 0.0)
+        u = f" {unit.strip().upper()}" if unit and unit.strip() else ""
         if val.is_integer():
-            return str(int(val))
-        return f"{val:.2f}"
+            return f"{int(val)}{u}"
+        formatted = f"{val:.3f}".rstrip("0").rstrip(".")
+        formatted = formatted.replace(".", ",")
+        return f"{formatted}{u}"
     except (ValueError, TypeError):
         return "0"
 

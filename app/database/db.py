@@ -36,6 +36,7 @@ def init_db():
         code TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
         category TEXT DEFAULT 'General',
+        unit TEXT DEFAULT 'UND', -- 'UND' (Unidad), 'KG' (Kilogramo)
         cost_usd REAL DEFAULT 0.0,
         price_usd REAL NOT NULL,
         stock REAL DEFAULT 0.0,
@@ -128,7 +129,11 @@ def init_db():
     );
     """)
 
-    # Configuración inicial por defecto
+    # Migración de esquemas existentes si falta la columna unit
+    try:
+        cursor.execute("ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'UND'")
+    except Exception:
+        pass  # La columna ya existe
     defaults = [
         ("system_name", "AtlasERP", "Nombre del sistema"),
         ("business_name", "Inversiones Atlas C.A.", "Nombre comercial del negocio"),
@@ -166,6 +171,22 @@ def init_db():
                 INSERT INTO products (code, name, category, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """, (code, name, cat, cost, price, stock, min_s, created, created))
+
+    # Asegurar productos de demostración que incluyan venta por kilogramo
+    cursor.execute("SELECT COUNT(*) FROM products WHERE unit = 'KG'")
+    if cursor.fetchone()[0] == 0:
+        kg_products = [
+            ("7592002001", "Papas Blancas Lavadas", "Vegetales", "KG", 0.90, 1.40, 45.5, 10.0),
+            ("7592002002", "Tomate Perita Maduro", "Vegetales", "KG", 1.10, 1.65, 30.0, 8.0),
+            ("7592002003", "Cebolla Morada Nacional", "Vegetales", "KG", 0.95, 1.35, 25.0, 5.0),
+            ("7592002004", "Queso Blanco Llanero Duro", "Charcutería", "KG", 3.80, 5.20, 20.0, 4.0),
+        ]
+        created = now_iso()
+        for code, name, cat, unit, cost, price, stock, min_s in kg_products:
+            cursor.execute("""
+                INSERT OR IGNORE INTO products (code, name, category, unit, cost_usd, price_usd, stock, min_stock, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            """, (code, name, cat, unit, cost, price, stock, min_s, created, created))
 
     conn.commit()
     conn.close()
